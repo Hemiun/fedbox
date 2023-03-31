@@ -11,3 +11,6 @@ bin/*
 *.bdb
 .cache
 internal/assets/assets.gen.go
+.local
+fs
+sqlite
