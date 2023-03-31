@@ -44,6 +44,13 @@ func (f FedBOX) Routes() func(chi.Router) {
 		r.Use(CleanRequestPath)
 		r.Use(SetCORSHeaders)
 
+		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte("Hello"))
+			if err != nil {
+				panic("Can't write response")
+			}
+		})
 		r.Method(http.MethodGet, "/", HandleItem(f))
 		r.Method(http.MethodHead, "/", HandleItem(f))
 		// TODO(marius): we can separate here the FedBOX specific collections from the ActivityPub spec ones
