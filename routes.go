@@ -1,6 +1,8 @@
 package fedbox
 
 import (
+	"fmt"
+	"github.com/go-ap/fedbox/ecommerce"
 	"net/http"
 
 	"github.com/go-ap/errors"
@@ -60,6 +62,8 @@ func (f FedBOX) Routes() func(chi.Router) {
 		r.Route("/{collection}", f.CollectionRoutes(true))
 
 		r.Group(f.OAuthRoutes())
+
+		r.Group(ecommerce.ECommerceRoutes())
 
 		if f.conf.Env.IsDev() && f.conf.Env.IsTest() {
 			r.Mount("/debug", middleware.Profiler())
