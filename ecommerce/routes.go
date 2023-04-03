@@ -15,6 +15,7 @@ func ECommerceRoutes() func(router chi.Router) {
 }
 
 func emptyHandler(w http.ResponseWriter, r *http.Request) {
+	//TODO: remove it
 	w.Write([]byte(r.Method))
 }
 
