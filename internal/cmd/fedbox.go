@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 	"io"
 	"os"
 	"time"
@@ -72,11 +73,20 @@ func run(version string) cli.ActionFunc {
 		if err != nil {
 			l.Errorf("Unable to initialize storage backend: %s", err)
 		}
+
 		a, err := fedbox.New(l.WithContext(lw.Ctx{"log": "fedbox"}), version, conf, db)
 		if err != nil {
 			l.Errorf("Unable to initialize: %s", err)
 			return err
 		}
+
+		/********* ECommerce **************************/
+		// initialization of objects necessary for ecommerce
+		//ecommerce.New(db, &conf, l.WithContext(lw.Ctx{"log": "ecommerce"}))
+		ctl := New(db, conf, l)
+		ecommerce.New(ctl, db, &conf, l.WithContext(lw.Ctx{"log": "ecommerce"}))
+
+		/**********************************************/
 
 		return a.Run(context.Background())
 	}

@@ -2,8 +2,6 @@ package fedbox
 
 import (
 	"context"
-	"github.com/go-ap/fedbox/ecommerce"
-	"github.com/go-ap/fedbox/internal/cmd"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -138,12 +136,7 @@ func New(l lw.Logger, ver string, conf config.Options, db FullStorage) (*FedBOX,
 		l.Warnf(err.Error())
 		return nil, err
 	}
-	/********* ECommerce **************************/
-	// initialization of objects necessary for ecommerce
-	ctl := cmd.New(db, conf, l)
-	ecommerce.New(ctl, &conf, l.WithContext(lw.Ctx{"log": "ecommerce"}))
 
-	/**********************************************/
 	app.R.Use(middleware.RequestID)
 	app.R.Use(lw.Middlewares(l)...)
 

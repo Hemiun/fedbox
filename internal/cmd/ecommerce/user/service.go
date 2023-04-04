@@ -5,35 +5,47 @@ import (
 	_ "git.sr.ht/~mariusor/lw"
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
-	"github.com/go-ap/fedbox"
 	ap "github.com/go-ap/fedbox/activitypub"
-	"github.com/go-ap/fedbox/internal/cmd"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
 	"github.com/go-ap/filters"
 	"time"
 )
 
 type UserService struct {
-	ctl     *cmd.Control
+	db      common.Storage
+	ctl     common.Control
 	baseURL string
 	logger  lw.Logger
 }
 
-func NewUserService(ctl *cmd.Control, baseURL string, l lw.Logger) *UserService {
+func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) *UserService {
 	var target UserService
-	target.ctl = ctl
+	target.db = db
 	target.baseURL = baseURL
 	target.logger = l
 	return &target
 }
 
 const (
-	keyType = fedbox.KeyTypeED25519
+	//keyType    = fedbox.KeyTypeED25519
+	clientName = "69c0d2c8-c105-45b2-bfbf-33ef8c7b770c"
 )
 
 func (s *UserService) clientUri() vocab.IRI {
 	// get URI for main client
 	//TODO:
-	return vocab.IRI("")
+	client, err := s.db.GetClient(clientName)
+	if err != nil {
+		s.logger.Errorf("Client not found. Unexpected error", err)
+		return ""
+	}
+
+	if client == nil {
+		s.logger.Errorf("Client not found", err)
+		return ""
+	}
+
+	return vocab.IRI(client.GetId())
 }
 
 func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
@@ -48,7 +60,7 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
 		return "", errors.Errorf("Can't find client actor")
 	}
 
-	author, err := ap.LoadActor(s.ctl.Storage, authIRI)
+	author, err := ap.LoadActor(s.db, authIRI)
 	if err != nil {
 		s.logger.Errorf("Can't load client actor from db", err)
 		return "", err
@@ -57,7 +69,7 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
 	tags := make(vocab.ItemCollection, 0)
 
 	objectsCollection := filters.ObjectsType.IRI(vocab.IRI(s.baseURL))
-	allObjects, _ := s.ctl.Storage.Load(objectsCollection)
+	allObjects, _ := s.db.Load(objectsCollection)
 	vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
 		for _, it := range col.Collection() {
 			vocab.OnObject(it, func(object *vocab.Object) error {
@@ -103,12 +115,12 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
 	}
 
 	//fmt.Printf("Added %q [%s]: %s\n", typ, name, newPerson.GetLink())
-	/*
-		if metaSaver, ok := s.ctl.Storage.(s.MetadataTyper); ok {
-			if err := AddKeyToItem(metaSaver, newPerson, keyType); err != nil {
-				Errf("Error saving metadata for %s: %s", name, err)
-			}
-		}
-	*/
+	//
+	//	if metaSaver, ok := s.ctl.Storage.(s.MetadataTyper); ok {
+	//		if err := AddKeyToItem(metaSaver, newPerson, keyType); err != nil {
+	//			Errf("Error saving metadata for %s: %s", name, err)
+	//		}
+	//	}
+	//
 	return newPerson.GetLink(), nil
 }

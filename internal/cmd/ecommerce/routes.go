@@ -24,7 +24,7 @@ func userRoutes() func(router chi.Router) {
 		r.Route("/user", func(r chi.Router) {
 			r.Get("/", emptyHandler)
 			r.Get("/{id}", emptyHandler)
-			r.Post("/", emptyHandler)
+			r.Post("/", addUserHandler)
 			r.Put("/", emptyHandler)
 		})
 	}
