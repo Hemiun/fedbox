@@ -2,7 +2,7 @@ package fedbox
 
 import (
 	"fmt"
-	"github.com/go-ap/fedbox/ecommerce"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 	"net/http"
 
 	"github.com/go-ap/errors"
