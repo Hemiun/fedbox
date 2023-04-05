@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"git.sr.ht/~mariusor/lw"
 	_ "git.sr.ht/~mariusor/lw"
 	vocab "github.com/go-ap/activitypub"
@@ -11,50 +12,56 @@ import (
 	"time"
 )
 
-type UserService struct {
-	db      common.Storage
-	ctl     common.Control
-	baseURL string
-	logger  lw.Logger
-}
-
-func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) *UserService {
-	var target UserService
-	target.db = db
-	target.ctl = ctl
-	target.baseURL = baseURL
-	target.logger = l
-	return &target
-}
-
 const (
 	//keyType    = fedbox.KeyTypeED25519
 	clientName = "69c0d2c8-c105-45b2-bfbf-33ef8c7b770c"
 )
 
-func (s *UserService) clientUri() vocab.IRI {
-	// get URI for main client
-	//TODO:
-	client, err := s.db.GetClient(clientName)
-	if err != nil {
-		s.logger.Errorf("Client not found. Unexpected error", err)
-		return ""
-	}
-
-	if client == nil {
-		s.logger.Errorf("Client not found", err)
-		return ""
-	}
-
-	return vocab.IRI(client.GetId())
+type UserService struct {
+	db        common.Storage
+	ctl       common.Control
+	baseURL   string
+	logger    lw.Logger
+	appActors vocab.Item
 }
 
-func (s *UserService) NewUser(ur UserRequest) (vocab.Item, error) {
+func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) *UserService {
+	var target UserService
+	var err error
+	target.db = db
+	target.ctl = ctl
+	target.baseURL = baseURL
+	target.logger = l
+
+	objectsCollection := filters.ActorsType.IRI(vocab.IRI(baseURL))
+	allObjects, _ := db.Load(objectsCollection)
+	fmt.Println(allObjects)
+
+	baseIRI := vocab.IRI(baseURL)
+	actorFilters := filters.FiltersNew()
+	actorFilters.IRI = filters.ActorsType.IRI(baseIRI)
+	actorFilters.Type = filters.CompStrs{filters.StringEquals("Application")}
+
+	target.appActors, err = db.Load(actorFilters.GetLink())
+	if err != nil {
+		// TODO:
+		return nil
+	}
+
+	return &target
+}
+
+func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, error) {
 	// TODO: check for null pointer
 	var it vocab.Item
 
 	if ur.Name == "" || ur.Password == "" {
 		return it, errors.Errorf("User credentials doesn't pass")
+	}
+
+	if !s.isSuperUser(actor) {
+		err := errors.Errorf("Actor has insufficient privileges")
+		return it, errors.NewForbidden(err, "Access denied")
 	}
 
 	authIRI := s.clientUri()
@@ -127,4 +134,33 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.Item, error) {
 	//	}
 	//
 	return newPerson, nil
+}
+
+func (s *UserService) clientUri() vocab.IRI {
+	// get URI for main client
+	//TODO:
+	client, err := s.db.GetClient(clientName)
+	if err != nil {
+		s.logger.Errorf("Client not found. Unexpected error", err)
+		return ""
+	}
+
+	if client == nil {
+		s.logger.Errorf("Client not found", err)
+		return ""
+	}
+
+	return vocab.IRI(client.GetId())
+}
+
+func (s *UserService) isSuperUser(actor vocab.Actor) bool {
+	// TODO:
+	var flIsSuperUser bool
+	vocab.OnActor(s.appActors, func(act *vocab.Actor) error {
+		if act.ID == actor.AttributedTo {
+			flIsSuperUser = true
+		}
+		return nil
+	})
+	return flIsSuperUser
 }

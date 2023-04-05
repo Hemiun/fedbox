@@ -3,6 +3,7 @@ package ecommerce
 import (
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/user"
 	json "github.com/go-ap/jsonld"
 	"io"
@@ -10,7 +11,7 @@ import (
 )
 
 type UserService interface {
-	NewUser(ur user.UserRequest) (vocab.Item, error)
+	AddUser(ur user.UserRequest, actor vocab.Actor) (vocab.Item, error)
 }
 
 func addUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +35,14 @@ func addUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	it, err := userService.NewUser(dto)
+	actor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
+	if !ok {
+		err = errors.NewBadRequest(err, "can't get actor from context")
+		logger.Errorf("can't get actor from context", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	it, err := userService.AddUser(dto, actor)
 	if err != nil {
 		logger.Errorf("can't add new user", err)
 		errors.HandleError(err).ServeHTTP(w, r)

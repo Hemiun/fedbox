@@ -1,12 +1,14 @@
 package ecommerce
 
 import (
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/middleware"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
 func ECommerceRoutes() func(router chi.Router) {
 	return func(r chi.Router) {
+		r.Use(middleware.CheckToken)
 		r.Route("/ecommerce", func(r chi.Router) {
 			r.Group(userRoutes())
 			r.Group(productRoutes())
