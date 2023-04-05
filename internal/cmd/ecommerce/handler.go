@@ -1,66 +1,59 @@
 package ecommerce
 
 import (
-	"encoding/json"
+	vocab "github.com/go-ap/activitypub"
+	"github.com/go-ap/errors"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/user"
+	json "github.com/go-ap/jsonld"
 	"io"
 	"net/http"
 )
+
+type UserService interface {
+	NewUser(ur user.UserRequest) (vocab.Item, error)
+}
 
 func addUserHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil || len(body) == 0 {
-		logger.Errorf("can't process request body", err)
-		w.WriteHeader(http.StatusBadRequest)
-		//fb.errFn("failed loading body: %+s", err)
-		//return it, http.StatusInternalServerError, errors.NewNotValid(err, "unable to read request body")
+		err = errors.NewBadRequest(err, "not empty body expected")
+		logger.Errorf("not empty body expected", err)
+		errors.HandleError(err).ServeHTTP(w, r)
 		return
 	}
+
+	// TODO: check unmarshall (json -> jsonld)
 	var dto user.UserRequest
 	err = json.Unmarshal(body, &dto)
-
 	if err != nil {
+		err = errors.NewBadRequest(err, "can't process request body")
 		logger.Errorf("can't process request body", err)
-		w.WriteHeader(http.StatusBadRequest)
+		errors.HandleError(err).ServeHTTP(w, r)
 		return
 	}
 
-	_, err = userService.NewUser(dto)
+	it, err := userService.NewUser(dto)
 	if err != nil {
 		logger.Errorf("can't add new user", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		errors.HandleError(err).ServeHTTP(w, r)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-}
 
-/*
-func addUserHandler() processing.ActivityHandlerFn {
-	return func(receivedIn vocab.IRI, r *http.Request) (vocab.Item, int, error) {
-		var it vocab.Item
-		body, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
+	var data []byte
 
-		if err != nil || len(body) == 0 {
-			logger.Errorf("can't process request body", err)
-			return it, http.StatusBadRequest, err
-		}
-		var dto user.UserRequest
-		err = json.Unmarshal(body, &dto)
+	if data, err = vocab.MarshalJSON(it); err != nil {
+		logger.Errorf("can't marshall response", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
 
-		if err != nil {
-			logger.Errorf("can't process request body", err)
-			return it, http.StatusBadRequest, err
-		}
-
-		u, err := userService.NewUser(dto)
-		if err != nil {
-			logger.Errorf("can't add new user", err)
-			return it, http.StatusBadRequest, err
-		}
-		return u, http.StatusCreated, nil
+	w.Header().Set("Location", it.GetLink().String())
+	w.Header().Set("Content-Type", json.ContentType)
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(data)
+	if err != nil {
+		logger.Errorf("can't write response", err)
 	}
 }
-*/

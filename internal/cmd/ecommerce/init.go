@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	userService *user.UserService
+	userService UserService
 	logger      lw.Logger
 	cfg         *config.Options
 )

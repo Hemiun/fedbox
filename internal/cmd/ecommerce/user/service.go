@@ -21,6 +21,7 @@ type UserService struct {
 func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) *UserService {
 	var target UserService
 	target.db = db
+	target.ctl = ctl
 	target.baseURL = baseURL
 	target.logger = l
 	return &target
@@ -48,22 +49,25 @@ func (s *UserService) clientUri() vocab.IRI {
 	return vocab.IRI(client.GetId())
 }
 
-func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
+func (s *UserService) NewUser(ur UserRequest) (vocab.Item, error) {
+	// TODO: check for null pointer
+	var it vocab.Item
+
 	if ur.Name == "" || ur.Password == "" {
-		return "", errors.Errorf("User credentials doesn't pass")
+		return it, errors.Errorf("User credentials doesn't pass")
 	}
 
 	authIRI := s.clientUri()
 
 	if authIRI == "" {
 		s.logger.Errorf("Can't get client actor Uri")
-		return "", errors.Errorf("Can't find client actor")
+		return it, errors.Errorf("Can't find client actor")
 	}
 
 	author, err := ap.LoadActor(s.db, authIRI)
 	if err != nil {
 		s.logger.Errorf("Can't load client actor from db", err)
-		return "", err
+		return it, err
 	}
 
 	tags := make(vocab.ItemCollection, 0)
@@ -111,7 +115,7 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
 
 	if newPerson, err = s.ctl.AddActor(newPerson, []byte(ur.Password), &author); err != nil {
 		s.logger.Errorf("Can't save new actor", err)
-		return "", err
+		return it, err
 	}
 
 	//fmt.Printf("Added %q [%s]: %s\n", typ, name, newPerson.GetLink())
@@ -122,5 +126,5 @@ func (s *UserService) NewUser(ur UserRequest) (vocab.IRI, error) {
 	//		}
 	//	}
 	//
-	return newPerson.GetLink(), nil
+	return newPerson, nil
 }
