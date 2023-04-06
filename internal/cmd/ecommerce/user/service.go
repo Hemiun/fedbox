@@ -1,7 +1,6 @@
 package user
 
 import (
-	"fmt"
 	"git.sr.ht/~mariusor/lw"
 	_ "git.sr.ht/~mariusor/lw"
 	vocab "github.com/go-ap/activitypub"
@@ -25,17 +24,13 @@ type UserService struct {
 	appActors vocab.Item
 }
 
-func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) *UserService {
+func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) (*UserService, error) {
 	var target UserService
 	var err error
 	target.db = db
 	target.ctl = ctl
 	target.baseURL = baseURL
 	target.logger = l
-
-	objectsCollection := filters.ActorsType.IRI(vocab.IRI(baseURL))
-	allObjects, _ := db.Load(objectsCollection)
-	fmt.Println(allObjects)
 
 	baseIRI := vocab.IRI(baseURL)
 	actorFilters := filters.FiltersNew()
@@ -44,15 +39,14 @@ func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.
 
 	target.appActors, err = db.Load(actorFilters.GetLink())
 	if err != nil {
-		// TODO:
-		return nil
+		l.Errorf("can't init user service: %v", err)
+		return nil, err
 	}
 
-	return &target
+	return &target, nil
 }
 
 func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, error) {
-	// TODO: check for null pointer
 	var it vocab.Item
 
 	if ur.Name == "" || ur.Password == "" {

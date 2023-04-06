@@ -17,22 +17,30 @@ var (
 )
 
 // New func init all required objects for ecommerce application
-func New(ctl common.Control, db common.Storage, config *config.Options, l lw.Logger) {
+func New(ctl common.Control, db common.Storage, config *config.Options, l lw.Logger) error {
 	var err error
 	logger = l
 	cfg = config
-	userService = user.NewUserService(ctl, db, cfg.BaseURL, logger)
 
-	client := client.New(
+	userService, err = user.NewUserService(ctl, db, cfg.BaseURL, logger)
+	if err != nil {
+		logger.Errorf("Can't init user service: %v", err)
+		return err
+	}
+
+	cl := client.New(
 		client.WithLogger(l.WithContext(lw.Ctx{"log": "client"})),
 		client.SkipTLSValidation(!cfg.Env.IsProd()),
 	)
 	middleware.AuthService, err = auth2.New(auth2.WithURL(cfg.BaseURL),
 		auth2.WithStorage(db),
-		auth2.WithClient(client), //TODO:
+		auth2.WithClient(cl), //TODO:
 		auth2.WithLogger(l),
 	)
 	if err != nil {
 		logger.Errorf("Can't init auth service: %v", err)
+		return err
 	}
+
+	return nil
 }
