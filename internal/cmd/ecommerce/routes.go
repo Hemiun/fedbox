@@ -25,9 +25,14 @@ func userRoutes() func(router chi.Router) {
 	return func(r chi.Router) {
 		r.Route("/user", func(r chi.Router) {
 			r.Get("/", emptyHandler)
-			r.Get("/{id}", emptyHandler)
 			r.Post("/", addUserHandler)
-			r.Put("/", emptyHandler)
+
+			r.Route("/{userID}", func(r chi.Router) {
+				r.Put("/", emptyHandler)
+				r.Delete("/", deleteUserHandler)
+				r.Get("/", emptyHandler)
+			})
+
 		})
 	}
 }

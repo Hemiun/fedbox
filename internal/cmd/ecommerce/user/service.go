@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	//keyType    = fedbox.KeyTypeED25519
-	clientName = "69c0d2c8-c105-45b2-bfbf-33ef8c7b770c"
+// keyType    = fedbox.KeyTypeED25519
 )
 
 type UserService struct {
@@ -46,28 +45,21 @@ func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.
 	return &target, nil
 }
 
-func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, error) {
+func (s *UserService) AddUser(ur UserRequest, caller vocab.Actor) (vocab.Item, error) {
 	var it vocab.Item
 
 	if ur.Name == "" || ur.Password == "" {
 		return it, errors.Errorf("User credentials doesn't pass")
 	}
-
-	if !s.isSuperUser(actor) {
+	if !s.isSuperUser(caller) {
 		err := errors.Errorf("Actor has insufficient privileges")
 		return it, errors.NewForbidden(err, "Access denied")
 	}
 
-	authIRI := s.clientUri()
-
-	if authIRI == "" {
-		s.logger.Errorf("Can't get client actor Uri")
-		return it, errors.Errorf("Can't find client actor")
-	}
-
-	author, err := ap.LoadActor(s.db, authIRI)
+	authIRI := caller.GetLink()
+	author, err := ap.LoadActor(s.db, caller.GetLink())
 	if err != nil {
-		s.logger.Errorf("Can't load client actor from db", err)
+		s.logger.Errorf("Can't load author from db", err)
 		return it, err
 	}
 
@@ -75,6 +67,7 @@ func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, er
 
 	objectsCollection := filters.ObjectsType.IRI(vocab.IRI(s.baseURL))
 	allObjects, _ := s.db.Load(objectsCollection)
+
 	vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
 		for _, it := range col.Collection() {
 			vocab.OnObject(it, func(object *vocab.Object) error {
@@ -97,8 +90,7 @@ func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, er
 
 	now := time.Now().UTC()
 	newPerson := &vocab.Person{
-		Type: typ,
-		// TODO(marius): when adding authentication to the command, we can set here the actor that executes it
+		Type:         typ,
 		AttributedTo: author.GetLink(),
 		Generator:    author.GetLink(),
 		Published:    now,
@@ -115,7 +107,7 @@ func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, er
 	}
 
 	if newPerson, err = s.ctl.AddActor(newPerson, []byte(ur.Password), &author); err != nil {
-		s.logger.Errorf("Can't save new actor", err)
+		s.logger.Errorf("Can't save new caller", err)
 		return it, err
 	}
 
@@ -130,29 +122,45 @@ func (s *UserService) AddUser(ur UserRequest, actor vocab.Actor) (vocab.Item, er
 	return newPerson, nil
 }
 
-func (s *UserService) clientUri() vocab.IRI {
-	// get URI for main client
-	//TODO:
-	client, err := s.db.GetClient(clientName)
+func (s *UserService) DeleteUser(caller vocab.Actor, actorID string) error {
+	// check access for the caller actor
+	if !s.isSuperUser(caller) {
+		err := errors.Errorf("Actor has insufficient privileges")
+		return errors.NewForbidden(err, "Access denied")
+	}
+
+	// Prepare actorIRI
+	f := filters.FiltersNew()
+	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(actorID)
+
+	// Load actor from repo
+	actor, err := ap.LoadActor(s.db, f.GetLink())
+
+	// It's important to check that actor is not empty. If your pass empty entity into db.Delete it will delete entire storage!
+	if err != nil || !vocab.IsNotEmpty(actor) {
+		s.logger.Errorf("Can't load author from db", err)
+		return errors.NewNotFound(err, "actor not found")
+	}
+
+	err = s.db.Delete(actor)
 	if err != nil {
-		s.logger.Errorf("Client not found. Unexpected error", err)
-		return ""
+		s.logger.Errorf("Can't delete author from db", err)
+		return err
 	}
-
-	if client == nil {
-		s.logger.Errorf("Client not found", err)
-		return ""
-	}
-
-	return vocab.IRI(client.GetId())
+	return nil
 }
 
 func (s *UserService) isSuperUser(actor vocab.Actor) bool {
 	// TODO:
 	var flIsSuperUser bool
-	vocab.OnActor(s.appActors, func(act *vocab.Actor) error {
-		if act.ID == actor.AttributedTo {
-			flIsSuperUser = true
+	vocab.OnCollectionIntf(s.appActors, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			vocab.OnObject(it, func(act *vocab.Object) error {
+				if act.ID == actor.AttributedTo {
+					flIsSuperUser = true
+				}
+				return nil
+			})
 		}
 		return nil
 	})

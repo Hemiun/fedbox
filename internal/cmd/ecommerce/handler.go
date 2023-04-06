@@ -6,12 +6,14 @@ import (
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/user"
 	json "github.com/go-ap/jsonld"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 )
 
 type UserService interface {
 	AddUser(ur user.UserRequest, actor vocab.Actor) (vocab.Item, error)
+	DeleteUser(caller vocab.Actor, userID string) error
 }
 
 func addUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +27,6 @@ func addUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: check unmarshall (json -> jsonld)
 	var dto user.UserRequest
 	err = json.Unmarshal(body, &dto)
 	if err != nil {
@@ -64,4 +65,23 @@ func addUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Errorf("can't write response", err)
 	}
+}
+
+func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
+	if !ok {
+		err = errors.NewBadRequest(err, "can't get actor from context")
+		logger.Errorf("can't get actor from context", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	userID := chi.URLParam(r, "userID")
+	err = userService.DeleteUser(callerActor, userID)
+	if err != nil {
+		logger.Errorf("can't delete user", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
