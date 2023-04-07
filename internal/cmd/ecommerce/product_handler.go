@@ -14,7 +14,7 @@ import (
 
 type ProductService interface {
 	CreateProduct(caller vocab.Actor, token string, p product.Product) (vocab.Item, error)
-	GetProduct(caller vocab.Actor, token string, productID string) (product.Product, error)
+	GetProduct(caller vocab.Actor, token string, productID string) (*product.Product, error)
 	GetProducts(caller vocab.Actor, token string) ([]product.Product, error)
 }
 
@@ -152,8 +152,7 @@ func getProductHandler(w http.ResponseWriter, r *http.Request) {
 	logger.Infof("ProductHandler. Current actor found. Actor.ID=%s", callerActor.ID)
 
 	//Trying to find a product
-	var p product.Product
-	p, err = productService.GetProduct(callerActor, token, productID)
+	p, err := productService.GetProduct(callerActor, token, productID)
 	if err != nil {
 		err = errors.NewBadRequest(err, "product searching error")
 		logger.Errorf("product searching error", err)

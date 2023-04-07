@@ -2,7 +2,7 @@ package product
 
 import (
 	"encoding/json"
-	"errors"
+	"github.com/go-ap/errors"
 	"strings"
 	"time"
 
@@ -92,16 +92,16 @@ func (s *ProductService) GetProducts(caller vocab.Actor, token string) ([]Produc
 		if resp.StatusCode() == 404 {
 			//not found
 			s.logger.Infof("ProductService. Product not found.")
-			return products, nil
+			return nil, errors.NotFoundf("Products not found")
 		} else {
 			//some other problem...
 			s.logger.Infof("Product not found. Status code=%s", resp.Status())
-			return products, errors.New("product not found")
+			return nil, errors.Newf("product not found")
 		}
 	}
 }
 
-func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID string) (Product, error) {
+func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID string) (*Product, error) {
 	//Constructing url to get ActivityPub object
 	objectsUrl := s.baseURL + "/objects/" + productID
 	s.logger.Infof("ProductService. Objects URL=%s", objectsUrl)
@@ -113,7 +113,7 @@ func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID 
 		Get(objectsUrl)
 	if err != nil {
 		s.logger.Errorf("product searching error", err)
-		return Product{}, err
+		return nil, err
 	}
 
 	//Analyzing the result
@@ -126,31 +126,31 @@ func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID 
 		err = vocabObject.UnmarshalJSON(resp.Body())
 		if err != nil {
 			s.logger.Errorf("object parsing error", err)
-			return Product{}, err
+			return nil, err
 		}
 
 		//checking object's ownership
 		if vocabObject.AttributedTo.GetID() != caller.GetID() {
 			//here we will return 'not found', not an error response
 			s.logger.Infof("ProductService. Current actor doesn't own the product we found.")
-			return Product{}, nil
+			return nil, nil
 		}
 
 		//mapping ActivityPub object to Product dto
 		resultProduct := s.mapObjectToProduct(vocabObject)
 		s.logger.Infof("ProductService. Result product object parsed successfully. Product.id=%s", resultProduct.Id)
 
-		return resultProduct, nil
+		return &resultProduct, nil
 	} else {
 		//not success
 		if resp.StatusCode() == 404 {
 			//not found
 			s.logger.Infof("ProductService. Product not found.")
-			return Product{}, nil
+			return nil, errors.NotFoundf("Product not found")
 		} else {
 			//some other problem...
 			s.logger.Infof("Product not found. Status code=%s", resp.Status())
-			return Product{}, errors.New("product not found")
+			return nil, errors.Newf("product not found")
 		}
 	}
 }
@@ -186,11 +186,6 @@ func (s *ProductService) CreateProduct(caller vocab.Actor, token string, p Produ
 		return nil, err
 	}
 
-	//mapping ActivityPub object to Product dto
-	//	resultProduct := s.mapObjectToProduct(vocabObject)
-	//	s.logger.Infof("ProductService. Result product object parsed successfully. Product.id=%s", resultProduct.Id)
-
-	//success
 	return vocabObject, nil
 }
 

@@ -48,7 +48,7 @@ func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.
 	return &target, nil
 }
 
-// AddUser creates new actor belonging to caller
+// CreateUser creates new actor belonging to caller
 // It's used for POST /user
 func (s *UserService) CreateUser(caller vocab.Actor, ur UserDTO) (vocab.Item, error) {
 	var it vocab.Item
