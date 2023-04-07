@@ -1,7 +1,6 @@
 package fedbox
 
 import (
-	"fmt"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 	"net/http"
 
