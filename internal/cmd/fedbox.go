@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 	"io"
 	"os"
 	"time"
@@ -77,6 +78,17 @@ func run(version string) cli.ActionFunc {
 			l.Errorf("Unable to initialize: %s", err)
 			return err
 		}
+
+		/********* ECommerce **************************/
+		// initialization of objects necessary for ecommerce
+		//ecommerce.New(db, &conf, l.WithContext(lw.Ctx{"log": "ecommerce"}))
+		ctl := New(db, conf, l)
+		err = ecommerce.New(ctl, db, &conf, l.WithContext(lw.Ctx{"log": "ecommerce"}))
+		if err != nil {
+			l.Errorf("Unable to initialize(ecommerce): %s", err)
+			return err
+		}
+		/**********************************************/
 
 		return a.Run(context.Background())
 	}
