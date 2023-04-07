@@ -6,14 +6,16 @@ import (
 	"github.com/go-ap/client"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/middleware"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/product"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/user"
 	"github.com/go-ap/fedbox/internal/config"
 )
 
 var (
-	userService UserService
-	logger      lw.Logger
-	cfg         *config.Options
+	userService    UserService
+	productService ProductService
+	logger         lw.Logger
+	cfg            *config.Options
 )
 
 // New func init all required objects for ecommerce application
@@ -27,6 +29,8 @@ func New(ctl common.Control, db common.Storage, config *config.Options, l lw.Log
 		logger.Errorf("Can't init user service: %v", err)
 		return err
 	}
+
+	productService = product.NewProductService(db, cfg.BaseURL, logger)
 
 	cl := client.New(
 		client.WithLogger(l.WithContext(lw.Ctx{"log": "client"})),
