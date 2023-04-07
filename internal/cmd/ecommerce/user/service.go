@@ -50,7 +50,7 @@ func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.
 
 // AddUser creates new actor belonging to caller
 // It's used for POST /user
-func (s *UserService) AddUser(caller vocab.Actor, ur UserDTO) (vocab.Item, error) {
+func (s *UserService) CreateUser(caller vocab.Actor, ur UserDTO) (vocab.Item, error) {
 	var it vocab.Item
 
 	if ur.Name == "" || ur.Password == "" {

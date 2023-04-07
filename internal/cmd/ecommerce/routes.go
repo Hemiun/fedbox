@@ -17,8 +17,8 @@ func ECommerceRoutes() func(router chi.Router) {
 }
 
 func emptyHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO: remove it
-	w.Write([]byte(r.Method))
+	//TODO: Stub.remove it.
+	w.Write([]byte(r.Method)) //nolint:errcheck
 }
 
 func userRoutes() func(router chi.Router) {
@@ -40,10 +40,12 @@ func userRoutes() func(router chi.Router) {
 func productRoutes() func(router chi.Router) {
 	return func(r chi.Router) {
 		r.Route("/product", func(r chi.Router) {
-			r.Get("/", emptyHandler)
-			r.Get("/{id}", emptyHandler)
-			r.Post("/", emptyHandler)
-			r.Put("/", emptyHandler)
+			r.Get("/", getProductsHandler)
+			r.Post("/", postProductHandler)
+
+			r.Route("/{productID}", func(r chi.Router) {
+				r.Get("/", getProductHandler)
+			})
 		})
 	}
 }

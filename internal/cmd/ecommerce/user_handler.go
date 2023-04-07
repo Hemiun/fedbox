@@ -14,9 +14,9 @@ import (
 const MIMEApplicationJSON = "application/json"
 
 type UserService interface {
-	AddUser(caller vocab.Actor, ur user.UserDTO) (vocab.Item, error)
-	DeleteUser(caller vocab.Actor, userID string) error
+	CreateUser(caller vocab.Actor, ur user.UserDTO) (vocab.Item, error)
 	FindUser(caller vocab.Actor, userID string) (*user.UserDTO, error)
+	DeleteUser(caller vocab.Actor, userID string) error
 	UpdateUser(caller vocab.Actor, userID string, ur user.UserDTO) (vocab.Item, error)
 }
 
@@ -48,7 +48,7 @@ func postUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	it, err := userService.AddUser(callerActor, dto)
+	it, err := userService.CreateUser(callerActor, dto)
 	if err != nil {
 		logger.Errorf("can't add new user", err)
 		errors.HandleError(err).ServeHTTP(w, r)
@@ -70,33 +70,6 @@ func postUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Errorf("can't write response", err)
 	}
-}
-
-func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	var err error
-	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
-	if !ok {
-		err = errors.NewBadRequest(err, "can't get actor from context")
-		logger.Errorf("can't get actor from context", err)
-		errors.HandleError(err).ServeHTTP(w, r)
-		return
-	}
-
-	userID := chi.URLParam(r, "userID")
-	if userID == "" {
-		err = errors.NewBadRequest(err, "userID not passed")
-		logger.Errorf("userID not passed", err)
-		errors.HandleError(err).ServeHTTP(w, r)
-		return
-	}
-
-	err = userService.DeleteUser(callerActor, userID)
-	if err != nil {
-		logger.Errorf("can't delete user", err)
-		errors.HandleError(err).ServeHTTP(w, r)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +108,33 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Errorf("can't write response", err)
 	}
+}
+
+func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
+	if !ok {
+		err = errors.NewBadRequest(err, "can't get actor from context")
+		logger.Errorf("can't get actor from context", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	userID := chi.URLParam(r, "userID")
+	if userID == "" {
+		err = errors.NewBadRequest(err, "userID not passed")
+		logger.Errorf("userID not passed", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	err = userService.DeleteUser(callerActor, userID)
+	if err != nil {
+		logger.Errorf("can't delete user", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func putUserHandler(w http.ResponseWriter, r *http.Request) {
