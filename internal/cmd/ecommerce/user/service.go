@@ -7,14 +7,16 @@ import (
 	"github.com/go-ap/errors"
 	ap "github.com/go-ap/fedbox/activitypub"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/metadata"
 	"github.com/go-ap/filters"
 	"time"
 )
 
 const (
-// keyType    = fedbox.KeyTypeED25519
+	keyType = metadata.KeyTypeED25519
 )
 
+// UserService
 type UserService struct {
 	db        common.Storage
 	ctl       common.Control
@@ -23,6 +25,7 @@ type UserService struct {
 	appActors vocab.Item
 }
 
+// NewUserService returns pointer to new UserService
 func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.Logger) (*UserService, error) {
 	var target UserService
 	var err error
@@ -45,7 +48,9 @@ func NewUserService(ctl common.Control, db common.Storage, baseURL string, l lw.
 	return &target, nil
 }
 
-func (s *UserService) AddUser(ur UserRequest, caller vocab.Actor) (vocab.Item, error) {
+// AddUser creates new actor belonging to caller
+// It's used for POST /user
+func (s *UserService) AddUser(caller vocab.Actor, ur UserDTO) (vocab.Item, error) {
 	var it vocab.Item
 
 	if ur.Name == "" || ur.Password == "" {
@@ -63,29 +68,7 @@ func (s *UserService) AddUser(ur UserRequest, caller vocab.Actor) (vocab.Item, e
 		return it, err
 	}
 
-	tags := make(vocab.ItemCollection, 0)
-
-	objectsCollection := filters.ObjectsType.IRI(vocab.IRI(s.baseURL))
-	allObjects, _ := s.db.Load(objectsCollection)
-
-	vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
-		for _, it := range col.Collection() {
-			vocab.OnObject(it, func(object *vocab.Object) error {
-				for _, tag := range ur.Tags {
-					if object.Name.First().Value.String() != tag {
-						continue
-					}
-					if object.AttributedTo.GetLink() != authIRI {
-						continue
-					}
-					tags.Append(object)
-				}
-				return nil
-			})
-		}
-		return nil
-	})
-
+	tags := s.prepareTags(authIRI, ur.Tags)
 	typ := vocab.PersonType
 
 	now := time.Now().UTC()
@@ -95,11 +78,14 @@ func (s *UserService) AddUser(ur UserRequest, caller vocab.Actor) (vocab.Item, e
 		Generator:    author.GetLink(),
 		Published:    now,
 		Summary: vocab.NaturalLanguageValues{
-			{vocab.NilLangRef, vocab.Content(ur.Comments)},
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Comments)},
 		},
 		Updated: now,
+		Name: vocab.NaturalLanguageValues{
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Name)},
+		},
 		PreferredUsername: vocab.NaturalLanguageValues{
-			{vocab.NilLangRef, vocab.Content(ur.Name)},
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Name)},
 		},
 	}
 	if len(tags) > 0 {
@@ -107,62 +93,227 @@ func (s *UserService) AddUser(ur UserRequest, caller vocab.Actor) (vocab.Item, e
 	}
 
 	if newPerson, err = s.ctl.AddActor(newPerson, []byte(ur.Password), &author); err != nil {
-		s.logger.Errorf("Can't save new caller", err)
+		s.logger.Errorf("Can't save new person", err)
 		return it, err
 	}
 
-	//fmt.Printf("Added %q [%s]: %s\n", typ, name, newPerson.GetLink())
-	//
-	//	if metaSaver, ok := s.ctl.Storage.(s.MetadataTyper); ok {
-	//		if err := AddKeyToItem(metaSaver, newPerson, keyType); err != nil {
-	//			Errf("Error saving metadata for %s: %s", name, err)
-	//		}
-	//	}
-	//
+	if metaSaver, ok := s.db.(common.MetadataTyper); ok {
+		err = func() error {
+			if err := vocab.OnActor(newPerson, metadata.AddKeyToPerson(metaSaver, keyType)); err != nil {
+				s.logger.Errorf("failed to process actor: %v", err)
+				return err
+			}
+			if _, err := s.db.Save(newPerson); err != nil {
+				s.logger.Errorf("can't save actor: %v", err)
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
+			s.logger.Errorf("Error saving metadata for the actor: %v", err)
+			return it, err
+		}
+	}
 	return newPerson, nil
 }
 
-func (s *UserService) DeleteUser(caller vocab.Actor, actorID string) error {
+// DeleteUser delete actor that corresponds userID
+// It's used for DELETE /user/{userID}
+func (s *UserService) DeleteUser(caller vocab.Actor, userID string) error {
 	// check access for the caller actor
-	if !s.isSuperUser(caller) {
+	// You can use update endpoint if you are superuser or if you want upda self actor
+	if !s.isSuperUser(caller) ||
+		filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID) == caller.ID {
 		err := errors.Errorf("Actor has insufficient privileges")
 		return errors.NewForbidden(err, "Access denied")
 	}
 
 	// Prepare actorIRI
 	f := filters.FiltersNew()
-	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(actorID)
+	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID)
 
 	// Load actor from repo
 	actor, err := ap.LoadActor(s.db, f.GetLink())
 
 	// It's important to check that actor is not empty. If your pass empty entity into db.Delete it will delete entire storage!
 	if err != nil || !vocab.IsNotEmpty(actor) {
-		s.logger.Errorf("Can't load author from db", err)
+		s.logger.Errorf("Can't load actor from db", err)
 		return errors.NewNotFound(err, "actor not found")
 	}
 
 	err = s.db.Delete(actor)
 	if err != nil {
-		s.logger.Errorf("Can't delete author from db", err)
+		s.logger.Errorf("Can't delete actor from db", err)
 		return err
 	}
 	return nil
 }
 
+// FindUser returns UserDTO struct for actor that  corresponds userID
+// It's used for GET /user/{userID}
+func (s *UserService) FindUser(_ vocab.Actor, userID string) (*UserDTO, error) {
+	// Available for all users without restrictions
+
+	// Prepare actorIRI
+	f := filters.FiltersNew()
+	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID)
+
+	// Load actor from repo
+	actor, err := ap.LoadActor(s.db, f.GetLink())
+	// It's important to check that actor is not empty. If your pass empty entity into db.Delete it will delete entire storage!
+	if err != nil || !vocab.IsNotEmpty(actor) {
+		s.logger.Errorf("Can't load actor from db", err)
+		return nil, errors.NewNotFound(err, "actor not found")
+	}
+
+	tags := s.readItemTags(actor)
+
+	res := UserDTO{
+		Name:     actor.PreferredUsername.String(),
+		Tags:     tags,
+		Comments: actor.Summary.String(),
+	}
+	if err != nil {
+		s.logger.Errorf("Can't delete actor from db", err)
+		return nil, err
+	}
+	return &res, nil
+}
+
+// UpdateUser update actor that  corresponds userID
+// It's used for PUT /user/{userID}
+func (s *UserService) UpdateUser(caller vocab.Actor, userID string, ur UserDTO) (vocab.Item, error) {
+	var it vocab.Item
+
+	// You can use update endpoint if you are superuser or if you want update self actor
+	if !s.isSuperUser(caller) ||
+		filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID) == caller.ID {
+		err := errors.Errorf("Actor has insufficient privileges")
+		return it, errors.NewForbidden(err, "Access denied")
+	}
+
+	author, err := ap.LoadActor(s.db, caller.GetLink())
+	if err != nil {
+		s.logger.Errorf("Can't load author from db", err)
+		return it, err
+	}
+
+	f := filters.FiltersNew()
+	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID)
+	// Load actor from repo
+	actor, err := ap.LoadActor(s.db, f.GetLink())
+	// It's important to check that actor is not empty. If your pass empty entity into db.Delete it will delete entire storage!
+	if err != nil || !vocab.IsNotEmpty(actor) {
+		s.logger.Errorf("Can't load actor from db", err)
+		return nil, errors.NewNotFound(err, "actor not found")
+	}
+
+	if ur.Name != "" {
+		actor.Name = vocab.NaturalLanguageValues{
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Name)},
+		}
+		actor.PreferredUsername = vocab.NaturalLanguageValues{
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Name)},
+		}
+	}
+
+	if ur.Comments != "" {
+		actor.Summary = vocab.NaturalLanguageValues{
+			{Ref: vocab.NilLangRef, Value: vocab.Content(ur.Comments)},
+		}
+	}
+
+	tags := s.prepareTags(caller.GetLink(), ur.Tags)
+
+	actor.AttributedTo = author.GetLink()
+	actor.Updated = time.Now().UTC()
+
+	if len(tags) > 0 {
+		actor.Tag = tags
+	}
+
+	newItem, err := s.db.Save(actor)
+	if err != nil {
+		s.logger.Errorf("Can't update actor", err)
+		return nil, errors.NewNotFound(err, "Can't update actor")
+	}
+
+	return newItem, nil
+}
+
 func (s *UserService) isSuperUser(actor vocab.Actor) bool {
-	// TODO:
 	var flIsSuperUser bool
-	vocab.OnCollectionIntf(s.appActors, func(col vocab.CollectionInterface) error {
+	err := vocab.OnCollectionIntf(s.appActors, func(col vocab.CollectionInterface) error {
 		for _, it := range col.Collection() {
-			vocab.OnObject(it, func(act *vocab.Object) error {
+			err2 := vocab.OnObject(it, func(act *vocab.Object) error {
 				if act.ID == actor.AttributedTo {
 					flIsSuperUser = true
 				}
 				return nil
 			})
+			if err2 != nil {
+				return err2
+			}
 		}
 		return nil
 	})
+	if err != nil {
+		s.logger.Errorf("can't check actor: %v", err)
+		return false
+	}
 	return flIsSuperUser
+}
+
+func (s *UserService) readItemTags(obj vocab.Actor) []string {
+	var res []string
+
+	err := vocab.OnCollectionIntf(obj.Tag, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			res2 := vocab.OnObject(it, func(object *vocab.Object) error {
+				res = append(res, object.Name.String())
+				return nil
+			})
+			if res2 != nil {
+				return res2
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Errorf("can't read tags: %v", err)
+		return nil
+	}
+	return res
+}
+
+func (s *UserService) prepareTags(authIRI vocab.IRI, lst []string) vocab.ItemCollection {
+	res := make(vocab.ItemCollection, 0)
+	objectsCollection := filters.ObjectsType.IRI(vocab.IRI(s.baseURL))
+	allObjects, _ := s.db.Load(objectsCollection)
+
+	err := vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			err2 := vocab.OnObject(it, func(object *vocab.Object) error {
+				for _, tag := range lst {
+					if object.Name.First().Value.String() != tag {
+						continue
+					}
+					if object.AttributedTo.GetLink() != authIRI {
+						continue
+					}
+					_ = res.Append(object)
+				}
+				return nil
+			})
+			if err2 != nil {
+				return err2
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Errorf("can't prepare tags: %v", err)
+		return nil
+	}
+	return res
 }

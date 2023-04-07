@@ -14,7 +14,6 @@ var AuthService *auth2.Server
 // If actor not found then http.StatusForbidden returned to the client.
 func CheckToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO
 		ctx := r.Context()
 		actor, err := AuthService.LoadActorFromAuthHeader(r)
 		if err != nil {
