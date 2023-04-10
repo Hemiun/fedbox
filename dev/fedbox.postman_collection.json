@@ -1,0 +1,567 @@
+{
+	"info": {
+		"_postman_id": "f92071da-611c-4ce9-9392-9bc6d029c1fd",
+		"name": "ecommerce",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "product",
+			"item": [
+				{
+					"name": "product.post",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Name532\",\n    \"summary\": \"Summary53\",\n    \"content\": {\n        \"price\":\"1002.00\",\n        \"color\":\"red\",\n        \"size\":\"xl\"\n        }\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "product.get",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product/261e8cc3-196d-4fa2-9b77-f226a18ea8cd",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product",
+								"261e8cc3-196d-4fa2-9b77-f226a18ea8cd"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "product.get_all",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "fedbox",
+			"item": [
+				{
+					"name": "outbox.get_all",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}/outbox",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}",
+								"outbox"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "objects.find",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/objects?attributedTo=30f8eedd-c9e1-45a0-b953-3ebafce3af80&type=Object",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"objects"
+							],
+							"query": [
+								{
+									"key": "attributedTo",
+									"value": "30f8eedd-c9e1-45a0-b953-3ebafce3af80"
+								},
+								{
+									"key": "type",
+									"value": "Object"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "actors.get_all",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/actors",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "actors.get_current",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "objects.get",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/objects/e5e06a49-86d3-4fac-94a5-7f7c8829f6de",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"objects",
+								"e5e06a49-86d3-4fac-94a5-7f7c8829f6de"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "outbox.post",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"@context\": \"https://www.w3.org/ns/activitystreams\",\n \"type\": \"Create\",\n \"to\": [\"https://chatty.example/ben/\"],\n \"actor\": \"http://{{url}}/actors/{{usr}}\",\n \"object\": {\"type\": \"Note\",\n            \"attributedTo\": \"http://{{url}}/actors/{{usr}}\",\n            \"to\": [\"https://chatty.example/ben/\"],\n            \"content\": \"Say, did you finish reading that book I lent you? 234\"}}"
+						},
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}/outbox",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}",
+								"outbox"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "auth",
+			"item": [
+				{
+					"name": "token.get",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{cln_secret}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{cln}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "client_id",
+								"value": "82167514-d2c2-4567-a9e0-58d7ea1e8e83",
+								"type": "default",
+								"disabled": true
+							},
+							{
+								"key": "grant_type",
+								"value": "password",
+								"type": "default",
+								"disabled": true
+							},
+							{
+								"key": "username",
+								"value": "user",
+								"type": "default",
+								"disabled": true
+							},
+							{
+								"key": "password",
+								"value": "user",
+								"type": "default",
+								"disabled": true
+							},
+							{
+								"warning": "This is a duplicate header and will be overridden by the Content-Type header generated by Postman.",
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "http://{{url}}/oauth/token?grant_type=password&username=http://{{url}}/actors/{{usr}}&password={{usr_pass}}",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"oauth",
+								"token"
+							],
+							"query": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "username",
+									"value": "http://{{url}}/actors/{{usr}}"
+								},
+								{
+									"key": "password",
+									"value": "{{usr_pass}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "user.post",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\":\"u1\",\r\n\t\"password\":\"p1\",\r\n\t\"tags\": [\"t1\", \"t2\", \"t3\"],\r\n\t\"comments\":\"it's a final contdown\"\r\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/ecommerce/user",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "user.put",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n\t\"comments\":\"it's updated user\"\r\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/ecommerce/user/10151a94-e0ee-4190-b76a-3f3e225a684c",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"user",
+								"10151a94-e0ee-4190-b76a-3f3e225a684c"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "user.get",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/user/10151a94-e0ee-4190-b76a-3f3e225a684c",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"user",
+								"10151a94-e0ee-4190-b76a-3f3e225a684c"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "user.del",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/user/10151a94-e0ee-4190-b76a-3f3e225a684c",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"user",
+								"10151a94-e0ee-4190-b76a-3f3e225a684c"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"var getTokenUrl = 'http://'",
+					"  + pm.collectionVariables.get('url')",
+					"  + '/oauth/token?grant_type=password&username='",
+					"  + 'http://' + pm.collectionVariables.get('url') + '/actors/'",
+					"  + pm.collectionVariables.get('usr')",
+					"  + '&password='",
+					"  + pm.collectionVariables.get('usr_pass');",
+					"",
+					"var postRequest = {",
+					"  url: getTokenUrl,",
+					"  method: 'POST',",
+					"  header: {",
+					"    'Content-Type': 'application/x-www-form-urlencoded',",
+					"  },",
+					"  auth: {",
+					"    type: \"basic\",",
+					"    basic: [",
+					"      { \"key\": \"username\", \"value\": pm.collectionVariables.get('cln') },",
+					"      { \"key\": \"password\", \"value\": pm.collectionVariables.get('cln_secret') }",
+					"    ]",
+					"  }",
+					"};",
+					"",
+					"pm.sendRequest(postRequest, (error, response) => {",
+					"  console.log(error ? error : response.json());",
+					"  pm.collectionVariables.set('token', response.json().access_token);",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "url",
+			"value": "localhost:4000",
+			"type": "default"
+		},
+		{
+			"key": "usr",
+			"value": "dd96aa10-3992-4853-9c2a-6a85b430c531",
+			"type": "default"
+		},
+		{
+			"key": "usr_pass",
+			"value": "1",
+			"type": "default"
+		},
+		{
+			"key": "cln",
+			"value": "fb1a28bf-bff8-4d48-80ce-6c138956403c",
+			"type": "default"
+		},
+		{
+			"key": "cln_secret",
+			"value": "1",
+			"type": "default"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
