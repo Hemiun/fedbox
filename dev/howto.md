@@ -8,10 +8,10 @@ And switch to ecommerce branch
 2. Copy file ".env.dist" in the root project directory to ".env" in the same directory
 
 3. Edit the following row in the ".env" file
-> FEDBOX_STORAGE=fs
-> FEDBOX_HOSTNAME={yourhost:yourport}
-> FEDBOX_LISTEN={yourhost:yourport}
-> FEDBOX_HTTPS=false
+> FEDBOX_STORAGE=fs  
+> FEDBOX_HOSTNAME={yourhost:yourport}  
+> FEDBOX_LISTEN={yourhost:yourport}  
+> FEDBOX_HTTPS=false  
 
 yourhost:yourport = probably will be "localhost:4000"
 For docker FEDBOX_LISTEN  must be an external interface (0.0.0.0:4000, no localhost!)
@@ -19,7 +19,7 @@ For docker FEDBOX_LISTEN  must be an external interface (0.0.0.0:4000, no localh
 4. Check your HOSTNAME env. It should be the same as FEDBOX_HOSTNAME
 
 5. Build the project
-   make download all
+>   make download all  
 
 as a result a couple of files will be created in the bin directory
 
