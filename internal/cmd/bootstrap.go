@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce/bootstrap"
 	"os"
 
 	vocab "github.com/go-ap/activitypub"
@@ -36,6 +37,7 @@ var BootstrapCmd = &cli.Command{
 	Action: bootstrapAct(&ctl),
 	Subcommands: []*cli.Command{
 		reset,
+		initApp,
 	},
 }
 
@@ -102,4 +104,30 @@ func Reset(conf config.Options) error {
 	}
 	fmt.Fprintf(os.Stdout, "Successful reset %s db for storage %s\n", conf.BaseStoragePath(), conf.Storage)
 	return nil
+}
+
+var initApp = &cli.Command{
+	Name:  "initApp",
+	Usage: "app initialization: new oauth client, new superuser",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:     "redirectUri",
+			Value:    nil,
+			Usage:    "The redirect URIs for current application",
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:     "secret",
+			Value:    "",
+			Usage:    "The client secret",
+			Required: true,
+		},
+	},
+	Action: initAppAct(&ctl),
+}
+
+func initAppAct(c *Control) cli.ActionFunc {
+	return func(ctx *cli.Context) error {
+		return bootstrap.InitNewApp(ctx, &ctl, c.Conf.BaseURL, ctl.Storage)
+	}
 }
