@@ -84,7 +84,9 @@ func addActorAct(ctl *Control) cli.ActionFunc {
 
 		authIRI := vocab.IRI(c.String("attributedTo"))
 		if len(authIRI) == 0 {
-			authIRI = vocab.IRI(ctl.Conf.BaseURL)
+			authIRI = ap.DefaultServiceIRI(ctl.Conf.BaseURL)
+			// old fedbox code
+			//authIRI = vocab.IRI(ctl.Conf.BaseURL)
 		}
 		author, err := ap.LoadActor(ctl.Storage, authIRI)
 		if err != nil {
