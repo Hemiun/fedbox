@@ -128,6 +128,10 @@ var initApp = &cli.Command{
 
 func initAppAct(c *Control) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
+		err := Bootstrap(c.Conf, c.Service)
+		if err != nil {
+			return err
+		}
 		return bootstrap.InitNewApp(ctx, &ctl, c.Conf.BaseURL, ctl.Storage)
 	}
 }
