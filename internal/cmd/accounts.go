@@ -167,9 +167,9 @@ func AddKeyToItem(metaSaver storage.MetadataTyper, it vocab.Item, typ string) er
 	if err := vocab.OnActor(it, fedbox.AddKeyToPerson(metaSaver, typ)); err != nil {
 		return errors.Annotatef(err, "failed to process actor: %s", it.GetID())
 	}
-	if _, err := ctl.Storage.Save(it); err != nil {
-		return errors.Annotatef(err, "failed to save actor: %s", it.GetID())
-	}
+	//if _, err := ctl.Storage.Save(it); err != nil {
+	//	return errors.Annotatef(err, "failed to save actor: %s", it.GetID())
+	//}
 	return nil
 }
 
