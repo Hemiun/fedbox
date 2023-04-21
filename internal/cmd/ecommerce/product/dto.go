@@ -6,6 +6,7 @@ type Product struct {
 	Name    string         `json:"name"`
 	Summary string         `json:"summary"`
 	Content ProductContent `json:"content"`
+	Tags    []string       `json:"tags"`
 }
 
 // ProductContent contains custom (not ActivityPub) properties
