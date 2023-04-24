@@ -2,7 +2,9 @@ package product
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-ap/errors"
+	"github.com/go-ap/filters"
 	"strings"
 	"time"
 
@@ -158,7 +160,7 @@ func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID 
 // CreateProduct creates new Product object and post it to current Actor's outbox collection
 func (s *ProductService) CreateProduct(caller vocab.Actor, token string, p Product) (vocab.Item, error) {
 	//building ActivityPub object of Activity type for product creation caller
-	createProductActivity, err := s.mapProductToCreateProductActivity(p, caller.ID)
+	createProductActivity, err := s.mapProductToCreateProductActivity(p, caller)
 	if err != nil {
 		s.logger.Errorf("product activity creation error", err)
 		return nil, err
@@ -224,14 +226,18 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 }
 
 // buildCreateProductActivity builds json representation of ActivityPub 'create activity' from given Product dto
-func (s *ProductService) mapProductToCreateProductActivity(p Product, ownerID vocab.IRI) (string, error) {
+func (s *ProductService) mapProductToCreateProductActivity(p Product, owner vocab.Actor) (string, error) {
 	//creating Object
 	o := vocab.ObjectNew(vocab.ObjectType)
 	o.Published = time.Now()
 	o.Name = vocab.DefaultNaturalLanguageValue(p.Name)
 	o.Summary = vocab.DefaultNaturalLanguageValue(p.Summary)
-	o.AttributedTo = ownerID
+	o.AttributedTo = owner.ID
 
+	tags := s.prepareTags(owner, p.Tags)
+	if len(tags) > 0 {
+		o.Tag = tags
+	}
 	//Object.Content property is a custom json string
 	if (p.Content != ProductContent{}) {
 		s.logger.Infof("product content is not empty")
@@ -250,7 +256,7 @@ func (s *ProductService) mapProductToCreateProductActivity(p Product, ownerID vo
 
 	//wrapping Object to Create activity
 	a := vocab.CreateNew(vocab.EmptyIRI, o)
-	a.Actor = ownerID
+	a.Actor = owner
 
 	//marshaling activity to json
 	data, err := a.MarshalJSON()
@@ -260,4 +266,51 @@ func (s *ProductService) mapProductToCreateProductActivity(p Product, ownerID vo
 	}
 
 	return string(data), nil
+}
+
+func (s *ProductService) prepareTags(owner vocab.Actor, src []string) vocab.ItemCollection {
+	tags := make(vocab.ItemCollection, 0)
+
+	fmt.Println(vocab.IRI(s.baseURL))
+	existsTagFilter := filters.Filters{
+		BaseURL:       vocab.IRI(s.baseURL),
+		Authenticated: &owner,
+		Type: filters.CompStrs{
+			filters.CompStr{
+				Str: string(vocab.ObjectType),
+			},
+		},
+		IRI: vocab.IRI(s.baseURL + "/objects"),
+		AttrTo: filters.CompStrs{
+			filters.CompStr{
+				Str: owner.ID.String(),
+			},
+		},
+	}
+
+	allObjects, _ := s.db.Load(existsTagFilter.GetLink())
+	existsTags := map[string]*vocab.Object{}
+
+	vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			vocab.OnObject(it, func(object *vocab.Object) error {
+				existsTags[object.Name.First().Value.String()] = object
+				return nil
+			})
+		}
+		return nil
+	})
+	for _, t := range src {
+		if el, ok := existsTags[t]; !ok {
+			tag := vocab.ObjectNew("")
+			tag.Name = vocab.NaturalLanguageValues{
+				{Ref: vocab.NilLangRef, Value: vocab.Content(t)},
+			}
+			tag.AttributedTo = owner
+			tags.Append(tag)
+		} else {
+			tags.Append(el)
+		}
+	}
+	return tags
 }

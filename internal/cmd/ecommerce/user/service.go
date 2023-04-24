@@ -61,14 +61,13 @@ func (s *UserService) CreateUser(caller vocab.Actor, ur UserDTO) (vocab.Item, er
 		return it, errors.NewForbidden(err, "Access denied")
 	}
 
-	authIRI := caller.GetLink()
 	author, err := ap.LoadActor(s.db, caller.GetLink())
 	if err != nil {
 		s.logger.Errorf("Can't load author from db", err)
 		return it, err
 	}
 
-	tags := s.prepareTags(authIRI, ur.Tags)
+	tags := s.prepareTags(caller, ur.Tags)
 	typ := vocab.PersonType
 
 	now := time.Now().UTC()
@@ -223,7 +222,7 @@ func (s *UserService) UpdateUser(caller vocab.Actor, userID string, ur UserDTO) 
 		}
 	}
 
-	tags := s.prepareTags(caller.GetLink(), ur.Tags)
+	tags := s.prepareTags(caller, ur.Tags)
 
 	actor.AttributedTo = author.GetLink()
 	actor.Updated = time.Now().UTC()
@@ -286,34 +285,48 @@ func (s *UserService) readItemTags(obj vocab.Actor) []string {
 	return res
 }
 
-func (s *UserService) prepareTags(authIRI vocab.IRI, lst []string) vocab.ItemCollection {
-	res := make(vocab.ItemCollection, 0)
-	objectsCollection := filters.ObjectsType.IRI(vocab.IRI(s.baseURL))
-	allObjects, _ := s.db.Load(objectsCollection)
+func (s *UserService) prepareTags(owner vocab.Actor, src []string) vocab.ItemCollection {
+	tags := make(vocab.ItemCollection, 0)
 
-	err := vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
+	existsTagFilter := filters.Filters{
+		BaseURL:       vocab.IRI(s.baseURL),
+		Authenticated: &owner,
+		Type: filters.CompStrs{
+			filters.CompStr{
+				Str: string(vocab.ObjectType),
+			},
+		},
+		IRI: vocab.IRI(s.baseURL + "/objects"),
+		AttrTo: filters.CompStrs{
+			filters.CompStr{
+				Str: owner.ID.String(),
+			},
+		},
+	}
+
+	allObjects, _ := s.db.Load(existsTagFilter.GetLink())
+	existsTags := map[string]*vocab.Object{}
+
+	vocab.OnCollectionIntf(allObjects, func(col vocab.CollectionInterface) error {
 		for _, it := range col.Collection() {
-			err2 := vocab.OnObject(it, func(object *vocab.Object) error {
-				for _, tag := range lst {
-					if object.Name.First().Value.String() != tag {
-						continue
-					}
-					if object.AttributedTo.GetLink() != authIRI {
-						continue
-					}
-					_ = res.Append(object)
-				}
+			vocab.OnObject(it, func(object *vocab.Object) error {
+				existsTags[object.Name.First().Value.String()] = object
 				return nil
 			})
-			if err2 != nil {
-				return err2
-			}
 		}
 		return nil
 	})
-	if err != nil {
-		s.logger.Errorf("can't prepare tags: %v", err)
-		return nil
+	for _, t := range src {
+		if el, ok := existsTags[t]; !ok {
+			tag := vocab.ObjectNew("")
+			tag.Name = vocab.NaturalLanguageValues{
+				{Ref: vocab.NilLangRef, Value: vocab.Content(t)},
+			}
+			tag.AttributedTo = owner
+			tags.Append(tag)
+		} else {
+			tags.Append(el)
+		}
 	}
-	return res
+	return tags
 }
