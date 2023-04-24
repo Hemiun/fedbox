@@ -202,6 +202,16 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 	p.Name = o.Name.String()
 	p.Summary = o.Summary.String()
 
+	vocab.OnCollectionIntf(o.Tag, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			vocab.OnObject(it, func(object *vocab.Object) error {
+				p.Tags = append(p.Tags, object.Name.First().String())
+				return nil
+			})
+		}
+		return nil
+	})
+
 	if o.Content.String() != "" {
 		s.logger.Infof("ProductService. Product content = %s", o.Content.String()[1:len(o.Content.String())-1])
 
