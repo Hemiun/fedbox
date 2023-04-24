@@ -89,7 +89,32 @@ user - user related requests
 
 We can run  any request in any order. However, some of them requires ProductID or UserID to be known to work correctly.
 
+## Using SMTP
 
+Email notification feature uses an external SMTP server. For testing or development purposes, any personal mail account will be sufficient. Take the following steps to use yandex.mail as an example:
 
+1. Create an account:
 
+    - Go to mail.yandex.ru
+    - Create new account in the standard way.
+    - Log in
+    - Go to "account management" > "security page".
+    - Click "App passwords" in the "Access to your data" section on the bottom of the page.
+    - Create and store somewhere the Yandex Mail service password.
 
+    Configuration steps are mail provider dependent and probably different for Gmail, etc.
+
+2. Specify the following parameters in the ".env" configuration file:
+
+    > FEDBOX_SMTP_HOST=smtp.yandex.ru
+    > FEDBOX_SMTP_PORT=465
+    > FEDBOX_SMTP_USER=my_yandex_user_name
+    > FEDBOX_SMTP_PASS=my_app_password
+    > FEDBOX_SMTP_FROM=ActivityPub eCommerce admin <my_yandex_user_name@yandex.ru>
+
+3. Test:
+
+    - Run Postman and open "dev/fedbox.postman_collection.json".
+    - Go to the "mail" folder of the collection.
+    - Specify a valid recipient email and name on the params tab.
+    - Click send. You should see the "Mail was sent" message in the response.

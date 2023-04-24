@@ -12,6 +12,7 @@ func ECommerceRoutes() func(router chi.Router) {
 		r.Route("/ecommerce", func(r chi.Router) {
 			r.Group(userRoutes())
 			r.Group(productRoutes())
+			r.Group(mailRoutes())
 		})
 	}
 }
@@ -46,6 +47,14 @@ func productRoutes() func(router chi.Router) {
 			r.Route("/{productID}", func(r chi.Router) {
 				r.Get("/", getProductHandler)
 			})
+		})
+	}
+}
+
+func mailRoutes() func(router chi.Router) {
+	return func(r chi.Router) {
+		r.Route("/mail", func(r chi.Router) {
+			r.Post("/", postMailHandler)
 		})
 	}
 }
