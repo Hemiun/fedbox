@@ -43,6 +43,13 @@ type Options struct {
 	RequestCache       bool
 	Profile            bool
 	MastodonCompatible bool
+
+	//email
+	SmtpHost string
+	SmtpPort int
+	SmtpUser string
+	SmtpPass string
+	SmtpFrom string
 }
 
 type StorageType string
@@ -72,6 +79,13 @@ const (
 	StorageBadger          = StorageType("badger")
 	StoragePostgres        = StorageType("postgres")
 	StorageSqlite          = StorageType("sqlite")
+
+	//email
+	KeySmtpHost = "SMTP_HOST"
+	KeySmtpPort = "SMTP_PORT"
+	KeySmtpUser = "SMTP_USER"
+	KeySmtpPass = "SMTP_PASS"
+	KeySmtpFrom = "SMTP_FROM"
 )
 
 const defaultDirPerm = os.ModeDir | os.ModePerm | 0700
@@ -207,5 +221,11 @@ func LoadFromEnv(e env.Type, timeOut time.Duration) (Options, error) {
 		conf.RequestCache = !disableRequestCache
 	}
 
+	//mail
+	conf.SmtpHost = Getval(KeySmtpHost, "")
+	conf.SmtpPort, _ = strconv.Atoi(Getval(KeySmtpPort, "465"))
+	conf.SmtpUser = Getval(KeySmtpUser, "")
+	conf.SmtpPass = Getval(KeySmtpPass, "")
+	conf.SmtpFrom = Getval(KeySmtpFrom, "")
 	return conf, nil
 }

@@ -2,7 +2,6 @@ package product
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/go-ap/errors"
 	"github.com/go-ap/filters"
 	"strings"
@@ -271,7 +270,6 @@ func (s *ProductService) mapProductToCreateProductActivity(p Product, owner voca
 func (s *ProductService) prepareTags(owner vocab.Actor, src []string) vocab.ItemCollection {
 	tags := make(vocab.ItemCollection, 0)
 
-	fmt.Println(vocab.IRI(s.baseURL))
 	existsTagFilter := filters.Filters{
 		BaseURL:       vocab.IRI(s.baseURL),
 		Authenticated: &owner,

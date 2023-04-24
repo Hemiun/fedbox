@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "f92071da-611c-4ce9-9392-9bc6d029c1fd",
+		"_postman_id": "a12dde87-9a8c-47c7-9634-fd98badcc136",
 		"name": "ecommerce",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -478,6 +478,56 @@
 								"ecommerce",
 								"user",
 								"10151a94-e0ee-4190-b76a-3f3e225a684c"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "mail",
+			"item": [
+				{
+					"name": "mail.post",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/mail?email=vlad-chechetko@yandex.ru&name=Vlad",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"mail"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "vlad-chechetko@yandex.ru"
+								},
+								{
+									"key": "name",
+									"value": "Vlad"
+								}
 							]
 						}
 					},

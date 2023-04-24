@@ -1,0 +1,16 @@
+{{define "subject"}}ActivityPub eCommerce subject{{end}}
+
+{{define "htmlBody"}}
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <h2>Hi {{.Name}},</h2>
+    <p>Welcome to ActivityPub eCommerce!</p>
+    <p>Sent at: {{now}}</p>
+  </body>
+</html>
+{{end}}
