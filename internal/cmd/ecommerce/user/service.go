@@ -9,6 +9,7 @@ import (
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/common"
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/metadata"
 	"github.com/go-ap/filters"
+	"github.com/go-ap/processing"
 	"time"
 )
 
@@ -100,10 +101,6 @@ func (s *UserService) CreateUser(caller vocab.Actor, ur UserDTO) (vocab.Item, er
 		err = func() error {
 			if err := vocab.OnActor(newPerson, metadata.AddKeyToPerson(metaSaver, keyType)); err != nil {
 				s.logger.Errorf("failed to process actor: %v", err)
-				return err
-			}
-			if _, err := s.db.Save(newPerson); err != nil {
-				s.logger.Errorf("can't save actor: %v", err)
 				return err
 			}
 			return nil
@@ -201,6 +198,7 @@ func (s *UserService) UpdateUser(caller vocab.Actor, userID string, ur UserDTO) 
 	f.IRI = filters.ActorsType.IRI(vocab.IRI(s.baseURL)).AddPath(userID)
 	// Load actor from repo
 	actor, err := ap.LoadActor(s.db, f.GetLink())
+
 	// It's important to check that actor is not empty. If your pass empty entity into db.Delete it will delete entire storage!
 	if err != nil || !vocab.IsNotEmpty(actor) {
 		s.logger.Errorf("Can't load actor from db", err)
@@ -231,10 +229,32 @@ func (s *UserService) UpdateUser(caller vocab.Actor, userID string, ur UserDTO) 
 		actor.Tag = tags
 	}
 
+	// any call of the db.Save(actor) method overwrites metadata field. we can't fix it
+	// As work around we read metadata before call db.Save(actor) and save metadata again after it
+	var (
+		actorMetadata *processing.Metadata
+		metaSaver     common.MetadataTyper
+	)
+	metaSaver, ok := s.db.(common.MetadataTyper)
+	if !ok {
+		s.logger.Errorf("Can't get metasaver", err)
+		return nil, err
+	}
+	actorMetadata, err = metaSaver.LoadMetadata(actor.GetLink())
+	if err != nil {
+		s.logger.Errorf("Can't load actor metadata from db", err)
+		return nil, err
+	}
+
 	newItem, err := s.db.Save(actor)
 	if err != nil {
 		s.logger.Errorf("Can't update actor", err)
 		return nil, errors.NewNotFound(err, "Can't update actor")
+	}
+	err = metaSaver.SaveMetadata(*actorMetadata, actor.GetLink())
+	if err != nil {
+		s.logger.Errorf("Can't save actor metadata into db", err)
+		return nil, err
 	}
 
 	return newItem, nil
@@ -323,9 +343,9 @@ func (s *UserService) prepareTags(owner vocab.Actor, src []string) vocab.ItemCol
 				{Ref: vocab.NilLangRef, Value: vocab.Content(t)},
 			}
 			tag.AttributedTo = owner
-			tags.Append(tag)
+			_ = tags.Append(tag)
 		} else {
-			tags.Append(el)
+			_ = tags.Append(el)
 		}
 	}
 	return tags
