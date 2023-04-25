@@ -46,6 +46,8 @@ func productRoutes() func(router chi.Router) {
 
 			r.Route("/{productID}", func(r chi.Router) {
 				r.Get("/", getProductHandler)
+				r.Put("/", putProductHandler)
+				r.Delete("/", deleteProductHandler)
 			})
 		})
 	}
