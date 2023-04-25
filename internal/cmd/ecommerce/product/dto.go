@@ -5,13 +5,13 @@ type Product struct {
 	Id      string         `json:"id"`
 	Name    string         `json:"name"`
 	Summary string         `json:"summary"`
-	Content ProductContent `json:"content"`
+	Content map[string]any `json:"content"`
 	Tags    []string       `json:"tags"`
+	Images  []Image        `json:"images"`
 }
 
-// ProductContent contains custom (not ActivityPub) properties
-type ProductContent struct {
-	Price string `json:"price"`
-	Color string `json:"color"`
-	Size  string `json:"size"`
+type Image struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	URL     string `json:"url"`
 }
