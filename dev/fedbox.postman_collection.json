@@ -9,45 +9,6 @@
 			"name": "product",
 			"item": [
 				{
-					"name": "product.post",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
-								"type": "default"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Name532\",\n    \"summary\": \"Summary53\",\n    \"content\": {\n        \"price\":\"1002.00\",\n        \"color\":\"red\",\n        \"size\":\"xl\"\n        }\n}"
-						},
-						"url": {
-							"raw": "http://{{url}}/ecommerce/product",
-							"protocol": "http",
-							"host": [
-								"{{url}}"
-							],
-							"path": [
-								"ecommerce",
-								"product"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "product.get",
 					"request": {
 						"auth": {
@@ -117,6 +78,121 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "product.put",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Doc211112q\",\n    \"summary\": \"Doc2\",\n    \"content\": {\n        \"price\":\"999.00\",\n        \"color\":\"red\",\n        \"size\":\"xlx2\"\n        },\n    \"images\": [\n        {\"name\":\"n11\", \"content\":\"{'imageType:'1'}\", \"url\":\"http://mysite.com/images/123\"}\n    ],\n    \"tags\": [\"tag1\"]\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product/a1ee431d-5449-4c09-bbea-ff4f73258f16",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product",
+								"a1ee431d-5449-4c09-bbea-ff4f73258f16"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "product.delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product/a1ee431d-5449-4c09-bbea-ff4f73258f16",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product",
+								"a1ee431d-5449-4c09-bbea-ff4f73258f16"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "product.post",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Doc21rr\",\n    \"summary\": \"Doc2\",\n    \"content\": {\n        \"price\":\"999.00\",\n        \"color\":\"red\",\n        \"size\":\"xlx2\"\n        },\n    \"images\": [\n        {\"name\":\"n11\", \"content\":\"{'imageType:'1'}\", \"url\":\"http://mysite.com/images/123\"},\n        {\"name\":\"n2\", \"content\":\"{'imageType:'1'}\", \"url\":\"http://mysite.com/images/123\"}\n    ],\n    \"tags\": [\"tag1\", \"tag2\"]\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/ecommerce/product",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"ecommerce",
+								"product"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -149,7 +225,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://{{url}}/objects?attributedTo=30f8eedd-c9e1-45a0-b953-3ebafce3af80&type=Object",
+							"raw": "http://{{url}}/objects?attributedTo={{usr}}&type=Object",
 							"protocol": "http",
 							"host": [
 								"{{url}}"
@@ -160,7 +236,7 @@
 							"query": [
 								{
 									"key": "attributedTo",
-									"value": "30f8eedd-c9e1-45a0-b953-3ebafce3af80"
+									"value": "{{usr}}"
 								},
 								{
 									"key": "type",
@@ -251,6 +327,126 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\"@context\": \"https://www.w3.org/ns/activitystreams\",\n \"type\": \"Create\",\n \"to\": [\"https://chatty.example/ben/\"],\n \"actor\": \"http://{{url}}/actors/{{usr}}\",\n \"object\": {\"type\": \"Note\",\n            \"attributedTo\": \"http://{{url}}/actors/{{usr}}\",\n            \"to\": [\"https://chatty.example/ben/\"],\n            \"content\": \"Say, did you finish reading that book I lent you? 234\"}}"
+						},
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}/outbox",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}",
+								"outbox"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "outbox.post.create_img",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"@context\": \"https://www.w3.org/ns/activitystreams\",\n \"type\": \"Create\",\n \"to\": [\"https://chatty.example/ben/\"],\n \"actor\": \"http://{{url}}/actors/{{usr}}\",\n \"object\":\n{\n  \"type\": \"Document\",\n  \"name\": \"Have you seen my cat?\",\n  \"attributedTo\": \"http://{{url}}/actors/{{usr}}\",\n  \"to\": [\"https://chatty.example/ben/\"],\n  \"content\": \"Say, did you finish reading that book I lent you? 234\",\n  \"attachment\": [\n    {\n      \"type\": \"Image\",\n      \"name\": \"Cat image\",\n      \"content\": \"{'type':'main'}\",\n      \"url\": \"http://example.org/cat1.jpeg\"\n    },\n    {\n      \"type\": \"Image\",\n      \"name\": \"Cat image 2\",\n      \"content\": \"{'type':'extra'}\",\n      \"url\": \"http://example.org/cat2.jpeg\"\n    },\n    {\n      \"type\": \"Image\",\n      \"name\": \"Cat image 3\",\n      \"content\": \"{'type':'extra'}\",\n      \"url\": \"http://example.org/cat3.jpeg\"\n    }\n  ]\n}\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}/outbox",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}",
+								"outbox"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "outbox.post.update_img",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"@context\": \"https://www.w3.org/ns/activitystreams\",\n \"type\": \"Update\",\n \"to\": [\"https://chatty.example/ben/\"],\n \"actor\": \"http://{{url}}/actors/{{usr}}\",\n \"object\":\n{\n  \"id\":\"http://vladislav-k8s:4000/objects/2f821b95-2c10-4abf-baa4-86ca1c3b59d4\",\n  \"type\": \"Document\",\n  \"name\": \"Have you seen my cat?\",\n  \"attributedTo\": \"http://{{url}}/actors/{{usr}}\",\n  \"to\": [\"https://chatty.example/ben/\"],\n  \"content\": \"Say, did you finish reading that book I lent you? 234\",\n  \"attachment\": [\n    {\n      \"type\": \"Image\",\n      \"name\": \"Cat image\",\n      \"content\": \"{'type':'main'}\",\n      \"url\": \"http://example.org/cat1.jpeg\"\n    },\n    {\n      \"type\": \"Image\",\n      \"name\": \"Cat image 3\",\n      \"content\": \"{'type':'extra'}\",\n      \"url\": \"http://example.org/cat3.jpeg\"\n    }\n  ]\n}\n}"
+						},
+						"url": {
+							"raw": "http://{{url}}/actors/{{usr}}/outbox",
+							"protocol": "http",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"actors",
+								"{{usr}}",
+								"outbox"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "outbox.post.delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"",
+								"type": "default"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"@context\": \"https://www.w3.org/ns/activitystreams\",\n \"type\": \"Delete\",\n \"to\": [\"https://chatty.example/ben/\"],\n \"actor\": \"http://{{url}}/actors/{{usr}}\",\n \"object\":\n{\n  \"id\":\"http://vladislav-k8s:4000/objects/1393396c-b5e3-42ff-9b05-5165f7038ad3\"\n}\n}"
 						},
 						"url": {
 							"raw": "http://{{url}}/actors/{{usr}}/outbox",

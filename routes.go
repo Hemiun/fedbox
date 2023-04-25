@@ -1,8 +1,9 @@
 package fedbox
 
 import (
-	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 	"net/http"
+
+	"github.com/go-ap/fedbox/internal/cmd/ecommerce"
 
 	"github.com/go-ap/errors"
 	"github.com/go-chi/chi/v5"

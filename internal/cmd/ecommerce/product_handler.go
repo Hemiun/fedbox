@@ -14,17 +14,19 @@ import (
 
 type ProductService interface {
 	CreateProduct(caller vocab.Actor, token string, p product.Product) (vocab.Item, error)
+	UpdateProduct(caller vocab.Actor, token string, p product.Product) (vocab.Item, error)
+	DeleteProduct(caller vocab.Actor, token string, productID string) error
 	GetProduct(caller vocab.Actor, token string, productID string) (*product.Product, error)
 	GetProducts(caller vocab.Actor, token string) ([]product.Product, error)
 }
 
-// postProductHandler handles product creation POST requests
+// postProductHandler handles product creation requests
 func postProductHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 
 	if err != nil || len(body) == 0 {
-		err = errors.NewBadRequest(err, "not empty body expected")
+		err = errors.NewBadRequest(nil, "not empty body expected")
 		logger.Errorf("not empty body expected", err)
 		errors.HandleError(err).ServeHTTP(w, r)
 		return
@@ -34,7 +36,6 @@ func postProductHandler(w http.ResponseWriter, r *http.Request) {
 	var dto product.Product
 	err = json.Unmarshal(body, &dto)
 	logger.Infof("ProductHandler. Product dto parsed. Product.Name=%s", dto.Name)
-
 	if err != nil {
 		err = errors.NewBadRequest(err, "can't process request body")
 		logger.Errorf("can't process request body", err)
@@ -48,7 +49,7 @@ func postProductHandler(w http.ResponseWriter, r *http.Request) {
 	//Getting current actor
 	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
 	if !ok {
-		err = errors.NewBadRequest(err, "can't get actor from context")
+		err = errors.NewBadRequest(nil, "can't get actor from context")
 		logger.Errorf("can't get actor from context", err)
 		errors.HandleError(err).ServeHTTP(w, r)
 		return
@@ -81,6 +82,123 @@ func postProductHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Errorf("can't write response", err)
 	}
+}
+
+// putProductHandler handles product update requests
+func putProductHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil || len(body) == 0 {
+		err = errors.NewBadRequest(err, "not empty body expected")
+		logger.Errorf("not empty body expected", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	//Parsing a product from request
+	var dto product.Product
+	err = json.Unmarshal(body, &dto)
+	logger.Infof("ProductHandler. Product dto parsed. Product.Name=%s", dto.Name)
+	if err != nil {
+		err = errors.NewBadRequest(err, "can't process request body")
+		logger.Errorf("can't process request body", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	productID := chi.URLParam(r, "productID")
+	if productID == "" {
+		err = errors.NewBadRequest(nil, "productID not specified")
+		logger.Errorf("productID not specified", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	if dto.Id == "" {
+		dto.Id = productID
+	} else {
+		if dto.Id != productID {
+			err = errors.NewBadRequest(nil, "product ID property is not the same as id in URL params")
+			logger.Errorf("Cant update product. Product ID property is not the same as id in URL params.", err)
+			errors.HandleError(err).ServeHTTP(w, r)
+			return
+		}
+	}
+
+	//Getting oAuth token
+	token := r.Header.Get("Authorization")
+
+	//Getting current actor
+	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
+	if !ok {
+		err = errors.NewBadRequest(nil, "can't get actor from context")
+		logger.Errorf("can't get actor from context", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	logger.Infof("ProductHandler. Current actor found. Actor.ID=%s", callerActor.ID)
+
+	it, err := productService.UpdateProduct(callerActor, token, dto)
+	if err != nil {
+		err = errors.NewBadRequest(err, "product update error")
+		logger.Errorf("product update error", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	//Serializing result product dto to json
+	var resultProductJson []byte
+	resultProductJson, err = json.Marshal(it)
+	if err != nil {
+		err = errors.NewBadRequest(err, "result product dto serialization error")
+		logger.Errorf("result product dto serialization error", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	//Writing response
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Location", it.GetLink().String())
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(resultProductJson)
+	if err != nil {
+		logger.Errorf("can't write response", err)
+	}
+}
+
+// deleteProductHandler handles delete product requests
+func deleteProductHandler(w http.ResponseWriter, r *http.Request) {
+	productID := chi.URLParam(r, "productID")
+	if productID == "" {
+		err := errors.NewBadRequest(nil, "productID not specified")
+		logger.Errorf("productID not specified", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	//Getting oAuth token
+	token := r.Header.Get("Authorization")
+
+	//Getting current actor
+	callerActor, ok := r.Context().Value(common.AuthActorKey{}).(vocab.Actor)
+	if !ok {
+		err := errors.NewBadRequest(nil, "can't get actor from context")
+		logger.Errorf("can't get actor from context", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+	logger.Infof("ProductHandler. Current actor found. Actor.ID=%s", callerActor.ID)
+
+	err := productService.DeleteProduct(callerActor, token, productID)
+	if err != nil {
+		err = errors.NewBadRequest(err, "product deletion error")
+		logger.Errorf("product deletion error", err)
+		errors.HandleError(err).ServeHTTP(w, r)
+		return
+	}
+
+	//Writing response
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func getProductsHandler(w http.ResponseWriter, r *http.Request) {

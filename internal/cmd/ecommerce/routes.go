@@ -1,9 +1,10 @@
 package ecommerce
 
 import (
+	"net/http"
+
 	"github.com/go-ap/fedbox/internal/cmd/ecommerce/middleware"
 	"github.com/go-chi/chi/v5"
-	"net/http"
 )
 
 func ECommerceRoutes() func(router chi.Router) {
@@ -46,6 +47,8 @@ func productRoutes() func(router chi.Router) {
 
 			r.Route("/{productID}", func(r chi.Router) {
 				r.Get("/", getProductHandler)
+				r.Put("/", putProductHandler)
+				r.Delete("/", deleteProductHandler)
 			})
 		})
 	}

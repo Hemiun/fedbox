@@ -2,10 +2,11 @@ package product
 
 import (
 	"encoding/json"
-	"github.com/go-ap/errors"
-	"github.com/go-ap/filters"
 	"strings"
 	"time"
+
+	"github.com/go-ap/errors"
+	"github.com/go-ap/filters"
 
 	"git.sr.ht/~mariusor/lw"
 	vocab "github.com/go-ap/activitypub"
@@ -37,7 +38,7 @@ func (s *ProductService) GetProducts(caller vocab.Actor, token string) ([]Produc
 	actorID := actorIdParts[len(actorIdParts)-1]
 
 	//constructing url to get ActivityPub collection
-	objectsUrl := s.baseURL + "/objects?attributedTo=" + actorID
+	objectsUrl := s.baseURL + "/objects?type=Document&attributedTo=" + actorID
 	s.logger.Infof("ProductService. Collection URL=%s", objectsUrl)
 
 	//getting ActivityPub collection
@@ -78,10 +79,6 @@ func (s *ProductService) GetProducts(caller vocab.Actor, token string) ([]Produc
 				s.logger.Errorf("item to Product mapping error", err)
 				continue
 			}
-			if o.GetType() != vocab.ObjectType {
-				//accepting only 'Object' type
-				continue
-			}
 			p := s.mapObjectToProduct(o)
 			products = append(products, p)
 		}
@@ -103,8 +100,12 @@ func (s *ProductService) GetProducts(caller vocab.Actor, token string) ([]Produc
 }
 
 func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID string) (*Product, error) {
+	//determining current actor ID
+	actorIdParts := strings.Split(caller.ID.String(), "/")
+	actorID := actorIdParts[len(actorIdParts)-1]
+
 	//Constructing url to get ActivityPub object
-	objectsUrl := s.baseURL + "/objects/" + productID
+	objectsUrl := s.baseURL + "/objects/" + productID + "?type=Document&attributedTo=" + actorID
 	s.logger.Infof("ProductService. Objects URL=%s", objectsUrl)
 
 	client := resty.New()
@@ -123,18 +124,11 @@ func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID 
 		s.logger.Infof("ProductService. Product found. Result product object:\n %s", resp.Body())
 
 		//unmarshalling ActivityPub Object json
-		vocabObject := vocab.ObjectNew(vocab.ObjectType)
+		vocabObject := vocab.ObjectNew(vocab.DocumentType)
 		err = vocabObject.UnmarshalJSON(resp.Body())
 		if err != nil {
 			s.logger.Errorf("object parsing error", err)
 			return nil, err
-		}
-
-		//checking object's ownership
-		if vocabObject.AttributedTo.GetID() != caller.GetID() {
-			//here we will return 'not found', not an error response
-			s.logger.Infof("ProductService. Current actor doesn't own the product we found.")
-			return nil, nil
 		}
 
 		//mapping ActivityPub object to Product dto
@@ -156,22 +150,32 @@ func (s *ProductService) GetProduct(caller vocab.Actor, token string, productID 
 	}
 }
 
-// CreateProduct creates new Product object and post it to current Actor's outbox collection
+// CreateProduct creates new Product object by posting Create Activity
 func (s *ProductService) CreateProduct(caller vocab.Actor, token string, p Product) (vocab.Item, error) {
-	//building ActivityPub object of Activity type for product creation caller
-	createProductActivity, err := s.mapProductToCreateProductActivity(p, caller)
+	//building ActivityPub object
+	object, err := s.mapProductToObject(p, caller)
 	if err != nil {
 		s.logger.Errorf("product activity creation error", err)
 		return nil, err
 	}
-	s.logger.Infof("ProductService. Activity 'CreateProduct' constructed:\n %s", createProductActivity)
+
+	//wrapping Object to Create activity
+	activity := vocab.CreateNew(vocab.EmptyIRI, object)
+	activity.Actor = caller
+
+	//marshaling activity to json
+	activityJson, err := activity.MarshalJSON()
+	if err != nil {
+		s.logger.Errorf("create product activity marshaling error")
+		return nil, err
+	}
 
 	//POST activity to current actor's outbox collection
 	client := resty.New()
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"").
 		SetHeader("Authorization", token).
-		SetBody(createProductActivity).
+		SetBody(string(activityJson)).
 		Post(caller.Outbox.GetLink().String())
 	if err != nil {
 		s.logger.Errorf("product creation error", err)
@@ -190,6 +194,83 @@ func (s *ProductService) CreateProduct(caller vocab.Actor, token string, p Produ
 	return vocabObject, nil
 }
 
+// UpdateProduct updates the Product object by posting Update Activity
+func (s *ProductService) UpdateProduct(caller vocab.Actor, token string, p Product) (vocab.Item, error) {
+	//building ActivityPub object
+	object, err := s.mapProductToObject(p, caller)
+	if err != nil {
+		s.logger.Errorf("product activity creation error", err)
+		return nil, err
+	}
+
+	//wrapping Object to Create activity
+	activity := vocab.UpdateNew(vocab.EmptyIRI, object)
+	activity.Actor = caller
+
+	//marshaling activity to json
+	activityJson, err := activity.MarshalJSON()
+	if err != nil {
+		s.logger.Errorf("create product activity marshaling error")
+		return nil, err
+	}
+
+	//POST activity to current actor's outbox collection
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"").
+		SetHeader("Authorization", token).
+		SetBody(string(activityJson)).
+		Post(caller.Outbox.GetLink().String())
+	if err != nil {
+		s.logger.Errorf("product creation error", err)
+		return nil, err
+	}
+	s.logger.Debugf("ProductService. Product created. Result product object:\n %s", resp.Body())
+
+	//unmarshalling ActivityPub Object json
+	vocabObject := vocab.ObjectNew(vocab.ObjectType)
+	err = vocabObject.UnmarshalJSON(resp.Body())
+	if err != nil {
+		s.logger.Errorf("object parsing error", err)
+		return nil, err
+	}
+
+	return vocabObject, nil
+}
+
+// DeleteProduct deletes the Product object by posting Delete Activity
+func (s *ProductService) DeleteProduct(caller vocab.Actor, token string, productID string) error {
+	//creating an Object with ID only
+	object := vocab.ObjectNew(vocab.DocumentType)
+	object.ID = vocab.IRI(s.baseURL + "/objects/" + productID)
+
+	//wrapping Object to Delete activity
+	activity := vocab.DeleteNew(vocab.EmptyIRI, object)
+	activity.Actor = caller
+
+	//marshaling activity to json
+	activityJson, err := activity.MarshalJSON()
+	if err != nil {
+		s.logger.Errorf("create product activity marshaling error")
+		return err
+	}
+
+	//POST activity to current actor's outbox collection
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"").
+		SetHeader("Authorization", token).
+		SetBody(string(activityJson)).
+		Post(caller.Outbox.GetLink().String())
+	if err != nil {
+		s.logger.Errorf("product creation error", err)
+		return err
+	}
+	s.logger.Debugf("ProductService. Product deleted. Result product object:\n %s", resp.Body())
+
+	return nil
+}
+
 // parseResultProductObject parses json of ActivityPub Object type and puts it to Product dto
 func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 	// extracting product ID from ActivityPub Object ID
@@ -202,6 +283,24 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 	p.Name = o.Name.String()
 	p.Summary = o.Summary.String()
 
+	//collecting product images
+	vocab.OnCollectionIntf(o.Attachment, func(col vocab.CollectionInterface) error {
+		for _, it := range col.Collection() {
+			vocab.OnObject(it, func(object *vocab.Object) error {
+				productImage := Image{}
+				productImage.Name = object.Name.String()
+				productImage.Content = object.Content.String()
+				if object.URL != nil {
+					productImage.URL = object.URL.GetLink().String()
+				}
+				p.Images = append(p.Images, productImage)
+				return nil
+			})
+		}
+		return nil
+	})
+
+	//collecting product tags
 	vocab.OnCollectionIntf(o.Tag, func(col vocab.CollectionInterface) error {
 		for _, it := range col.Collection() {
 			vocab.OnObject(it, func(object *vocab.Object) error {
@@ -212,6 +311,7 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 		return nil
 	})
 
+	//setting the content field
 	if o.Content.String() != "" {
 		s.logger.Infof("ProductService. Product content = %s", o.Content.String()[1:len(o.Content.String())-1])
 
@@ -219,11 +319,8 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 		productContentString := o.Content.String()[1 : len(o.Content.String())-1]
 
 		//unmarshal the content value to dto
-		productContentDto := &ProductContent{}
-		err := json.Unmarshal([]byte(productContentString), productContentDto)
-		if err == nil {
-			p.Content = *productContentDto
-		} else {
+		err := json.Unmarshal([]byte(productContentString), &p.Content)
+		if err != nil {
 			//just ignore the content in case of parsing errors
 			s.logger.Warnf("parsing product content error")
 		}
@@ -234,27 +331,32 @@ func (s *ProductService) mapObjectToProduct(o *vocab.Object) Product {
 	return p
 }
 
-// buildCreateProductActivity builds json representation of ActivityPub 'create activity' from given Product dto
-func (s *ProductService) mapProductToCreateProductActivity(p Product, owner vocab.Actor) (string, error) {
+// mapProductToObject builds ActivityPub object from given Product dto
+func (s *ProductService) mapProductToObject(p Product, owner vocab.Actor) (*vocab.Object, error) {
 	//creating Object
-	o := vocab.ObjectNew(vocab.ObjectType)
+	o := vocab.ObjectNew(vocab.DocumentType)
+	if p.Id != "" {
+		o.ID = vocab.IRI(s.baseURL + "/objects/" + p.Id)
+	}
 	o.Published = time.Now()
 	o.Name = vocab.DefaultNaturalLanguageValue(p.Name)
 	o.Summary = vocab.DefaultNaturalLanguageValue(p.Summary)
 	o.AttributedTo = owner.ID
+
+	o.Attachment = s.prepareImages(p)
 
 	tags := s.prepareTags(owner, p.Tags)
 	if len(tags) > 0 {
 		o.Tag = tags
 	}
 	//Object.Content property is a custom json string
-	if (p.Content != ProductContent{}) {
+	if len(p.Content) != 0 {
 		s.logger.Infof("product content is not empty")
 		//marshaling the content
 		productContentData, err := json.Marshal(p.Content)
 		if err != nil {
 			s.logger.Errorf("parsing product content error")
-			return "", err
+			return nil, err
 		}
 		//store the content in 'Content' property wrapped in ""
 		o.Content = vocab.DefaultNaturalLanguageValue("\"" + string(productContentData) + "\"")
@@ -263,18 +365,30 @@ func (s *ProductService) mapProductToCreateProductActivity(p Product, owner voca
 		s.logger.Infof("product content is empty")
 	}
 
-	//wrapping Object to Create activity
-	a := vocab.CreateNew(vocab.EmptyIRI, o)
-	a.Actor = owner
+	return o, nil
+}
 
-	//marshaling activity to json
-	data, err := a.MarshalJSON()
-	if err != nil {
-		s.logger.Errorf("create product activity marshaling error")
-		return "", err
+func (s ProductService) prepareImages(p Product) vocab.ItemCollection {
+	images := make(vocab.ItemCollection, 0)
+
+	if len(p.Images) == 0 {
+		s.logger.Infof("product contains bo images")
+		return images
 	}
 
-	return string(data), nil
+	s.logger.Infof("product contains %d images", len(p.Images))
+	for _, val := range p.Images {
+		if len(val.URL) == 0 {
+			continue
+		}
+		image := vocab.ObjectNew(vocab.ImageType)
+		image.Name = vocab.DefaultNaturalLanguageValue(val.Name)
+		image.Content = vocab.DefaultNaturalLanguageValue(val.Content)
+		image.URL = vocab.IRI(val.URL)
+		images.Append(image)
+	}
+
+	return images
 }
 
 func (s *ProductService) prepareTags(owner vocab.Actor, src []string) vocab.ItemCollection {
