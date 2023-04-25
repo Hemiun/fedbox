@@ -23,10 +23,10 @@ For docker FEDBOX_LISTEN  must be an external interface (0.0.0.0:4000, no localh
 
 as a result a couple of files will be created in the bin directory
 
-6. For app initialization (storage creation, oauth client creation, superuser creation) call bootstrap initApp command: 
+6. For app initialization (storage creation, oauth client creation, superuser creation) call bootstrap initApp command. You must pass as arguments oauth client secret and redirect url. 
  > ./bin/fedboxctl bootstrap initApp -secret=<...> -redirectUri=<...>
  
-Please, save data that will be print as result  
+Please, save data that will be print as result.   
 
 7. Run the server
     ./bin/fedbox -env=dev
